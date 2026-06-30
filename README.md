@@ -80,10 +80,8 @@ Radix Free covers the core origin placement workflow. **[Radix Basic](https://di
 | → Snap Layers (named setting presets) | — | — | ✓ |
 | → Chain / Distribute origins | — | — | ✓ |
 
-→ **[Get Radix Basic or Radix Pro on Discord](https://discord.com/users/damagedarchitect)**
-
 ## Checkout what will you get in [Radix Pro](https://imgur.com/gallery/radix-pro-v3-1-0-ui-Se8iGiW)
-
+→ **[Get Radix Basic or Radix Pro on Discord](https://discord.com/users/damagedarchitect)**
 ---
 
 ## License
