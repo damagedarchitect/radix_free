@@ -69,13 +69,13 @@ The free version covers the core workflow. **[Radix Pro](https://discord.com/use
 | Snap History HUD overlay | — | — | ✓ |
 | Radix Place suite | — | — | ✓ |
 | Snap History (10 slots) | — | — | ✓ |
-| → Pivot Library (8 named slots per object) | — | ✓ |
-| → Collision Preview (live bbox overlap) | — | ✓ |
-| → Surface Alignment (snap + rotate to normal) | — | ✓ |
-| → Smart Contact Detection | — | ✓ |
-| → Snap Layers (named setting presets) | — | ✓ |
-| → Chain / Distribute origins | — | ✓ |
-| → Batch Contact Detection | — | ✓ |
+| → Pivot Library (8 named slots per object) | — | — | ✓ |
+| → Collision Preview (live bbox overlap) | — | — | ✓ |
+| → Surface Alignment (snap + rotate to normal) | — | — | ✓ |
+| → Smart Contact Detection | — | — | ✓ |
+| → Snap Layers (named setting presets) | — | — | ✓ |
+| → Chain / Distribute origins | — | — | ✓ |
+| → Batch Contact Detection | — | — | ✓ |
 
 → **[Request Radix Pro on Discord](https://discord.com/users/damagedarchitect)**
 
