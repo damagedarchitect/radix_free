@@ -82,7 +82,8 @@ Radix Free covers the core origin placement workflow. **[Radix Basic](https://di
 
 → **[Get Radix Basic or Radix Pro on Discord](https://discord.com/users/damagedarchitect)**
 
-## Checkout what will you get in [Radix Pro UI](https://imgur.com/gallery/radix-pro-v3-1-0-ui-Se8iGiW)
+## Checkout what will you get in [Radix Pro](https://imgur.com/gallery/radix-pro-v3-1-0-ui-Se8iGiW)
+
 ---
 
 ## License
