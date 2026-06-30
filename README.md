@@ -53,8 +53,8 @@ The free version covers the core workflow. **[Radix Pro](https://discord.com/use
 | 39 snap positions | ✓ | ✓ | ✓ |
 | Origin → World Zero | ✓ | ✓ | ✓ |
 | BBox handles + hover | ✓ | ✓ | ✓ |
-| Object Orientation Reset | — | ✓ | ✓ |
 | Global Centers (Geometry, BBox, Mass) | ✓ | ✓ | ✓ |
+| Object Orientation Reset | — | ✓ | ✓ |
 | Surface / Vertex / Grid snap | — | ✓ | ✓ |
 | Viewport preview | — | ✓ | ✓ |
 | Surface modifier keys (Shift / Ctrl / Alt) | — | ✓ | ✓ |
