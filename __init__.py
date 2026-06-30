@@ -8,8 +8,8 @@ bl_info = {
     ),
     "author": "DaMagedArchitect",
     "version": (1, 0, 0),
-    "doc_url": "",
-    "tracker_url": "",
+    "doc_url": "https://discord.com/users/damagedarchitect",
+    "tracker_url": "https://discord.com/users/damagedarchitect",
 }
 
 
@@ -86,11 +86,6 @@ def deselect_all_objects(context):
 PREVIEW_ARROW_NAME = "RadixPro_Preview_Arrow"  # kept for any lingering ref in 39-pos op
 PREVIEW_COLLECTION = "RadixPro_Preview_Col"
 
-# ── Draw handler for BBox handle shapes (the only GPU callback in Free) ────────
-_draw_handler_2d = None   # POST_PIXEL for shaped bbox handles
-
-# ── Hover state: world pos of hovered handle, written by click_bbox_handle ─────
-_handle_hover_world_pos: list = [None]  # None | Vector
 
 # ── Misc constants referenced by the 39-position operator ─────────────────────
 _origin_history: dict = {}       # not exposed in Free UI but operator reads it
@@ -778,223 +773,8 @@ def _tag_view3d_redraw():
 
 # ---------------- GPU draw handler ----------------
 
-def _make_shape_tris(shape, cx, cy, r):
-    """Return a flat list of (x, y) tuples representing the shape as filled triangles.
-
-    All shapes are centered at (cx, cy) with approximate radius r.
-    Shapes are generated at their natural orientation:
-      DIAMOND   — corners       — orange  — 4 equidistant points, rotated 45°
-      SQUARE    — edge mids     — red     — axis-aligned square
-      TRIANGLE  — face centers  — blue    — equilateral pointing up
-      CIRCLE    — bbox center   — yellow  — 12-segment polygon
-    """
-    import math
-    if shape == 'DIAMOND':
-        top   = (cx,     cy + r)
-        right = (cx + r, cy    )
-        bot   = (cx,     cy - r)
-        left  = (cx - r, cy    )
-        return [top, right, bot,   top, bot, left]
-
-    elif shape == 'SQUARE':
-        s = r * 0.82
-        tl = (cx - s, cy + s); tr = (cx + s, cy + s)
-        bl = (cx - s, cy - s); br = (cx + s, cy - s)
-        return [tl, tr, br,   tl, br, bl]
-
-    elif shape == 'TRIANGLE':
-        s60 = math.sin(math.radians(60))
-        top = (cx,            cy + r)
-        bl  = (cx - r * s60, cy - r * 0.5)
-        br  = (cx + r * s60, cy - r * 0.5)
-        return [top, br, bl]
-
-    elif shape == 'CIRCLE':
-        verts, n = [], 14
-        for i in range(n):
-            a1 = 2 * math.pi * i       / n
-            a2 = 2 * math.pi * (i + 1) / n
-            verts += [
-                (cx, cy),
-                (cx + r * math.cos(a1), cy + r * math.sin(a1)),
-                (cx + r * math.cos(a2), cy + r * math.sin(a2)),
-            ]
-        return verts
-
-    return []
-
-
-def _draw_single_handle(shader, cx, cy, shape, fill_color, size):
-    """Draw one handle: black outline then colored fill for contrast on any background."""
-    # Outer black shadow (contrast against bright geometry)
-    outer = _make_shape_tris(shape, cx, cy, size + 2.8)
-    if outer:
-        b = batch_for_shader(shader, 'TRIS', {"pos": outer})
-        shader.bind()
-        shader.uniform_float("color", (0.0, 0.0, 0.0, 0.85))
-        b.draw(shader)
-
-    # Thin white ring for contrast against dark backgrounds
-    white = _make_shape_tris(shape, cx, cy, size + 1.2)
-    if white:
-        b = batch_for_shader(shader, 'TRIS', {"pos": white})
-        shader.bind()
-        shader.uniform_float("color", (1.0, 1.0, 1.0, 0.65))
-        b.draw(shader)
-
-    # Color fill
-    fill = _make_shape_tris(shape, cx, cy, size)
-    if fill:
-        b = batch_for_shader(shader, 'TRIS', {"pos": fill})
-        shader.bind()
-        shader.uniform_float("color", (*fill_color, 1.0))
-        b.draw(shader)
-
-
-def draw_handle_shapes_2d():
-    """POST_PIXEL callback: draw shaped, colored, outlined bbox handles in screen space.
-
-    Runs in 2D screen space so handle shapes are a FIXED PIXEL SIZE regardless of
-    zoom level or object distance — matching the legibility of Blender's own gizmos.
-
-    Shape ↔ handle type:
-      Diamond  (orange) → bbox corners   (8 handles)
-      Square   (red)    → edge midpoints (12 handles)
-      Triangle (blue)   → face centers   (6 handles)
-      Circle   (yellow) → bbox center    (1 handle, only in BBOX_CENTER mode)
-    """
-    try:
-        scene = bpy.context.scene
-    except Exception:
-        return
-
-    if not getattr(scene, 'origin_show_viewport_handles', False):
-        return
-
-    try:
-        obj = bpy.context.active_object
-    except Exception:
-        return
-
-    if not obj or obj.type not in GEOMETRY_TYPES:
-        return
-
-    try:
-        region = bpy.context.region
-        rv3d   = bpy.context.space_data.region_3d if bpy.context.space_data else None
-        if not region or not rv3d:
-            return
-    except Exception:
-        return
-
-    from bpy_extras.view3d_utils import location_3d_to_region_2d
-    mode = getattr(scene, 'origin_handles_snap_type', 'ALL')
-
-    # ── Compute world-space handle positions ───────────────────────────────────
-    mw  = obj.matrix_world
-    bbl = [Vector(c) for c in obj.bound_box]
-    bbw = [mw @ v for v in bbl]
-
-    xs = [v.x for v in bbw]; ys = [v.y for v in bbw]; zs = [v.z for v in bbw]
-    mn = Vector((min(xs), min(ys), min(zs)))
-    mx = Vector((max(xs), max(ys), max(zs)))
-    md = (mn + mx) * 0.5
-
-    # (world_pos, shape, fill_rgba_3)
-    handles = []
-
-    if mode in ('CORNERS', 'ALL'):
-        for v in bbw:
-            handles.append((v.copy(), 'DIAMOND', (0.96, 0.59, 0.18)))  # orange
-
-    if mode in ('EDGE_MIDPOINTS', 'ALL'):
-        edges = [(0,1),(1,2),(2,3),(3,0),
-                 (4,5),(5,6),(6,7),(7,4),
-                 (0,4),(1,5),(2,6),(3,7)]
-        for a, b in edges:
-            mid = (bbw[a] + bbw[b]) * 0.5
-            handles.append((mid, 'SQUARE', (0.90, 0.13, 0.12)))  # red
-
-    if mode in ('FACE_CENTERS', 'ALL'):
-        face_centers = [
-            Vector((md.x, md.y, mx.z)),  # top
-            Vector((md.x, md.y, mn.z)),  # bottom
-            Vector((md.x, mx.y, md.z)),  # front
-            Vector((md.x, mn.y, md.z)),  # back
-            Vector((mx.x, md.y, md.z)),  # right
-            Vector((mn.x, md.y, md.z)),  # left
-        ]
-        for pos in face_centers:
-            handles.append((pos, 'TRIANGLE', (0.18, 0.55, 0.99)))  # blue
-
-    if mode == 'BBOX_CENTER':
-        handles.append((md.copy(), 'CIRCLE', (1.0, 0.90, 0.15)))  # yellow
-
-    if not handles:
-        return
-
-    # ── Project to screen and draw ─────────────────────────────────────────────
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-    gpu.state.blend_set('ALPHA')
-    gpu.state.depth_test_set('NONE')   # always on top
-
-    HANDLE_SIZE = max(getattr(scene, 'origin_handle_size', 8.5), 4.0)
-    HOVER_SCALE = 1.55          # how much to grow on hover
-    HOVER_GLOW_BOOST = 0.18    # subtle brightness lift on hovered handle
-
-    # Hovered world position written by the click_bbox_handle modal
-    hover_pos = _handle_hover_world_pos[0]
-
-    for world_pos, shape, color in handles:
-        screen_pos = location_3d_to_region_2d(region, rv3d, world_pos)
-        if screen_pos is None:
-            continue
-        cx, cy = screen_pos.x, screen_pos.y
-        # Clip to region bounds with a small margin so half-visible handles still draw
-        if cx < -20 or cx > region.width + 20 or cy < -20 or cy > region.height + 20:
-            continue
-
-        # Hover: check whether the modal flagged this exact world position
-        is_hovered = (hover_pos is not None and
-                      (world_pos - hover_pos).length < 0.001)
-
-        draw_size = HANDLE_SIZE * HOVER_SCALE if is_hovered else HANDLE_SIZE
-        draw_color = (
-            tuple(min(1.0, c + HOVER_GLOW_BOOST) for c in color)
-            if is_hovered else color
-        )
-        _draw_single_handle(shader, cx, cy, shape, draw_color, draw_size)
-
-    gpu.state.depth_test_set('LESS_EQUAL')
-    gpu.state.blend_set('NONE')
-
-
-def _draw_viewport_handles(scene, obj):
-    """Legacy stub — actual drawing now happens in draw_handle_shapes_2d (POST_PIXEL).
-    Kept so that any residual internal call sites don't error."""
-    pass
-
 
 # ---------------- Preview management (cache + handlers) ----------------
-
-
-def ensure_handlers():
-    """Register the BBox-handle-shapes draw handler. Free has no preview overlay."""
-    global _draw_handler_2d
-    if _draw_handler_2d is None:
-        _draw_handler_2d = bpy.types.SpaceView3D.draw_handler_add(
-            draw_handle_shapes_2d, (), 'WINDOW', 'POST_PIXEL')
-
-
-def remove_handlers():
-    """Remove the BBox-handle-shapes draw handler."""
-    global _draw_handler_2d
-    if _draw_handler_2d is not None:
-        try:
-            bpy.types.SpaceView3D.draw_handler_remove(_draw_handler_2d, 'WINDOW')
-        except Exception:
-            pass
-        _draw_handler_2d = None
 
 # ---------------- Depsgraph Handler ----------------
 
@@ -1806,208 +1586,6 @@ class VIEW3D_MT_radix_pie(bpy.types.Menu):
 
 # ── Viewport BBox Handles — Click-to-Snap Modal ────────────────────────────────
 
-class RADIX_OT_click_bbox_handle(bpy.types.Operator):
-    """Click a viewport bounding-box handle to snap the origin there.
-    Handles are drawn when 'Viewport Handles' is enabled in Origin Snap Mode."""
-    bl_idname  = "radixpro.click_bbox_handle"
-    bl_label   = "Click BBox Handle"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    _draw_handler   = None
-    _handles        = []        # [(world_pos, label, color)]
-    _hovered_handle = None
-
-    @classmethod
-    def poll(cls, context):
-        return (context.area.type == 'VIEW_3D' and
-                context.active_object and
-                context.active_object.type == 'MESH')
-
-    def invoke(self, context, event):
-        obj = context.active_object
-        self._handles = self._build_handles(obj, context.scene)
-        if not self._handles:
-            self.report({'WARNING'}, "Cannot compute handles — object has no geometry")
-            return {'CANCELLED'}
-
-        self._hovered_handle = None
-        self._draw_handler   = bpy.types.SpaceView3D.draw_handler_add(
-            self._draw_cb, (context,), 'WINDOW', 'POST_PIXEL'
-        )
-        context.window.cursor_set('CROSSHAIR')
-        context.window_manager.modal_handler_add(self)
-        context.workspace.status_text_set(
-            "Click a handle to snap origin  |  RMB / Esc: Cancel"
-        )
-        context.area.header_text_set(
-            "BBox Handle Snap — click a handle dot  |  Esc: Cancel"
-        )
-        return {'RUNNING_MODAL'}
-
-    def modal(self, context, event):
-        context.area.tag_redraw()
-
-        if event.type == 'MOUSEMOVE':
-            self._hovered_handle = self._nearest_handle(context, event)
-            # Share with the passive draw_handle_shapes_2d callback so it can
-            # enlarge the hovered shape without needing a reference to this instance.
-            _handle_hover_world_pos[0] = (
-                self._hovered_handle[0].copy() if self._hovered_handle else None
-            )
-            return {'RUNNING_MODAL'}
-
-        elif event.type == 'LEFTMOUSE' and event.value == 'PRESS':
-            handle = self._nearest_handle(context, event)
-            if handle:
-                self._snap_to(context, handle[0])
-                self._cleanup(context)
-                self.report({'INFO'}, f"✓ Origin snapped to {handle[1]}")
-                return {'FINISHED'}
-            # Click missed all handles — cancel
-            self._cleanup(context)
-            return {'CANCELLED'}
-
-        elif event.type in {'RIGHTMOUSE', 'ESC'}:
-            self._cleanup(context)
-            return {'CANCELLED'}
-
-        return {'RUNNING_MODAL'}
-
-    # ── internal helpers ──────────────────────────────────────────────────────
-
-    def _build_handles(self, obj, scene):
-        """Build handle list: (world_pos, label, rgb_color)."""
-        mw    = obj.matrix_world
-        bbl   = [Vector(c) for c in obj.bound_box]
-        bbw   = [mw @ v for v in bbl]
-
-        xs = [v.x for v in bbw]; ys = [v.y for v in bbw]; zs = [v.z for v in bbw]
-        mn = Vector((min(xs), min(ys), min(zs)))
-        mx = Vector((max(xs), max(ys), max(zs)))
-        md = (mn + mx) / 2
-
-        mode   = scene.origin_handles_snap_type
-        result = []
-
-        if mode in ('FACE_CENTERS', 'ALL'):
-            # 6 face centers — blue
-            result += [
-                (Vector((md.x, md.y, mx.z)), "Top Center",    (0.3, 0.6, 1.0)),
-                (Vector((md.x, md.y, mn.z)), "Bottom Center", (0.3, 0.6, 1.0)),
-                (Vector((md.x, mx.y, md.z)), "Front Center",  (0.3, 0.6, 1.0)),
-                (Vector((md.x, mn.y, md.z)), "Back Center",   (0.3, 0.6, 1.0)),
-                (Vector((mx.x, md.y, md.z)), "Right Center",  (0.3, 0.6, 1.0)),
-                (Vector((mn.x, md.y, md.z)), "Left Center",   (0.3, 0.6, 1.0)),
-            ]
-
-        if mode in ('CORNERS', 'ALL'):
-            # 8 corners — orange
-            for v in bbw:
-                result.append((v.copy(), "Corner", (1.0, 0.55, 0.1)))
-
-        if mode in ('EDGE_MIDPOINTS', 'ALL'):
-            # 12 edge midpoints — green
-            edges = [
-                (0,1),(1,2),(2,3),(3,0),    # bottom ring
-                (4,5),(5,6),(6,7),(7,4),    # top ring
-                (0,4),(1,5),(2,6),(3,7),    # verticals
-            ]
-            for a, b in edges:
-                mid = (bbw[a] + bbw[b]) / 2
-                result.append((mid, "Edge Midpoint", (0.2, 0.9, 0.4)))
-
-        if mode == 'BBOX_CENTER':
-            result.append((md.copy(), "BBox Center", (1.0, 0.9, 0.1)))
-
-        return result
-
-    def _nearest_handle(self, context, event, threshold_px=16):
-        """Return the closest handle within threshold_px, or None."""
-        region = context.region
-        rv3d   = context.region_data
-        if not region or not rv3d:
-            return None
-
-        mouse = Vector((event.mouse_region_x, event.mouse_region_y))
-        best, best_d = None, float('inf')
-
-        for handle in self._handles:
-            screen = location_3d_to_region_2d(region, rv3d, handle[0])
-            if screen:
-                d = (Vector(screen) - mouse).length
-                if d < threshold_px and d < best_d:
-                    best_d = d
-                    best   = handle
-
-        return best
-
-    def _snap_to(self, context, world_pos):
-        obj = context.active_object
-        if not obj or obj.type != 'MESH':
-            return
-        _record_history(obj)
-        orig_cursor = context.scene.cursor.location.copy()
-        orig_sel    = list(context.selected_objects)
-        orig_active = context.view_layer.objects.active
-
-        context.scene.cursor.location = world_pos
-        deselect_all_objects(context)
-        obj.select_set(True)
-        context.view_layer.objects.active = obj
-        _safe_origin_set(context, type='ORIGIN_CURSOR')
-
-        try:
-            push_snap_history(obj.name, Vector(world_pos))
-        except Exception:
-            pass
-
-        deselect_all_objects(context)
-        for o in orig_sel:
-            if o.name in context.view_layer.objects:
-                o.select_set(True)
-        context.view_layer.objects.active = orig_active
-        context.scene.cursor.location = orig_cursor
-
-    def _draw_cb(self, context):
-        """Draw handle dots in POST_PIXEL space for sharp screen-space dots."""
-        region = context.region
-        rv3d   = context.region_data
-        if not region or not rv3d:
-            return
-
-        gpu.state.blend_set('ALPHA')
-        shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-
-        for handle in self._handles:
-            world_pos = handle[0]
-            color     = handle[2]
-            is_hov    = (self._hovered_handle is handle)
-            size      = 14.0 if is_hov else 9.0
-            alpha     = 1.0  if is_hov else 0.8
-            sc        = location_3d_to_region_2d(region, rv3d, world_pos)
-            if sc:
-                try:
-                    batch = batch_for_shader(shader, 'POINTS', {"pos": [(*sc, 0)]})
-                    gpu.state.point_size_set(size)
-                    shader.bind()
-                    shader.uniform_float("color", (*color, alpha))
-                    batch.draw(shader)
-                except Exception:
-                    pass
-
-        gpu.state.point_size_set(1.0)
-        gpu.state.blend_set('NONE')
-
-    def _cleanup(self, context):
-        _handle_hover_world_pos[0] = None   # drop hover so shapes return to normal size
-        if self._draw_handler:
-            bpy.types.SpaceView3D.draw_handler_remove(self._draw_handler, 'WINDOW')
-            self._draw_handler = None
-        context.window.cursor_set('DEFAULT')
-        context.area.header_text_set(None)
-        context.workspace.status_text_set(None)
-        context.area.tag_redraw()
-
 
 # ---------------- Panel ----------------
 
@@ -2069,7 +1647,7 @@ class RADIX_OT_click_bbox_handle(bpy.types.Operator):
 
 class VIEW3D_PT_origin_tools(bpy.types.Panel):
     """Radix — Precision Origin Placement (Free Edition)
-39 snap positions via dropdown menus · BBox Handle mode"""
+39 snap positions via dropdown menus"""
     bl_label = "Radix Free"
     bl_idname = "VIEW3D_PT_origin_tools"
     bl_space_type = 'VIEW_3D'
@@ -2136,21 +1714,7 @@ class VIEW3D_PT_origin_tools(bpy.types.Panel):
             layout.label(text="Select a mesh object", icon='ERROR')
 
         layout.separator()
-
-        # ============ BBOX HANDLE MODE ============
-        box = layout.box()
-        box.label(text="BBox Handle Mode", icon='SNAP_ON')
-        h_row = box.row(align=True)
-        h_icon = 'HIDE_OFF' if scene.origin_show_viewport_handles else 'HIDE_ON'
-        h_row.prop(scene, "origin_show_viewport_handles", text="Handles", icon=h_icon, toggle=True)
-        if scene.origin_show_viewport_handles:
-            h_row.prop(scene, "origin_handles_snap_type", text="")
-            hc_row = box.row(align=True)
-            hc_row.scale_y = 1.1
-            hc_row.operator("radixpro.click_bbox_handle", text="Click Handle to Snap", icon='SNAP_ON')
-
         # ============ FOOTER ============
-        layout.separator(factor=1.2)
         footer = layout.row(align=True)
         footer.scale_y = 1.3
         footer.operator("radixpro.open_basic_link", text="❤ Get Radix Basic", icon='NONE')
@@ -2434,7 +1998,6 @@ classes = (
     RADIX_OT_show_shortcuts_info,
     OBJECT_OT_set_origin_extreme_full,
     VIEW3D_MT_radix_pie,
-    RADIX_OT_click_bbox_handle,
     VIEW3D_PT_origin_tools,
     VIEW3D_MT_set_origin_faces,
     VIEW3D_MT_set_origin_vertices,
@@ -2462,8 +2025,7 @@ addon_keymaps = []
 
 def _on_load_post(*args):
     """Reset volatile in-memory state when a new .blend file loads."""
-    _handle_hover_world_pos[0] = None
-    remove_handlers()
+    pass  # nothing to reset in Free
 
 
 def register():
@@ -2501,16 +2063,6 @@ def register():
         ],
     )
     # BBox Handle mode
-    bpy.types.Scene.origin_show_viewport_handles = bpy.props.BoolProperty(
-        name="Show Viewport Handles", default=False)
-    bpy.types.Scene.origin_handles_snap_type = bpy.props.EnumProperty(
-        name="Handle Type", default='BBOX',
-        items=[
-            ('BBOX',   "BBox",   ""),
-            ('MESH',   "Mesh",   ""),
-            ('CURSOR', "Cursor", ""),
-        ],
-    )
     # Flip Left/Right labels
     bpy.types.Scene.origin_flip_left_right = bpy.props.BoolProperty(
         name="Flip Left/Right", default=False,
@@ -2546,6 +2098,7 @@ def register():
     bpy.types.VIEW3D_MT_object_context_menu.append(context_menu_func)
 
 
+
 def unregister():
     bpy.types.VIEW3D_MT_object.remove(menu_func)
     bpy.types.VIEW3D_MT_object_context_menu.remove(context_menu_func)
@@ -2560,11 +2113,10 @@ def unregister():
     if _on_load_post in bpy.app.handlers.load_post:
         bpy.app.handlers.load_post.remove(_on_load_post)
 
-    remove_handlers()
 
     props_to_delete = [
         "origin_snap_source", "origin_preview_orientation", "origin_front_axis",
-        "origin_show_viewport_handles", "origin_handles_snap_type",
+        
         "origin_flip_left_right", "origin_mo_affect_target", "origin_mo_snap_mode",
     ]
     for prop in props_to_delete:
