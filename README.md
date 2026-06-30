@@ -1,4 +1,6 @@
-<img width="251" height="529" alt="image" src="https://github.com/user-attachments/assets/7e11a85a-e7fc-45ea-a728-192f5d1ed969" /># Radix | A 39 Precision Origin Placement for Blender
+<img width="251" height="529" alt="image" src="https://github.com/user-attachments/assets/7e11a85a-e7fc-45ea-a728-192f5d1ed969" /># 
+
+Radix | A 39 Precision Origin Placement for Blender
 
 **Radix** snaps object origins to exactly the right place with one click to any face, corner, edge midpoint, surface point, or vertex on any mesh.
 
