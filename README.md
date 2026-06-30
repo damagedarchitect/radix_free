@@ -32,7 +32,7 @@ Set the snap source (Mesh / BBox / Cursor), world vs local orientation, and whic
 
 1. Download **radix-1.0.0.zip** from [Releases](../../releases/latest)
 2. In Blender: **Edit → Preferences → Extensions → Install from Disk**
-3. Select the zip — Radix Free appears in the **N-Panel → Radix Free** tab
+3. Select the zip, then Radix Free appears in the **N-Panel → Radix Free** tab
 
 Requires **Blender 4.5 or later** (including Blender 5.x).
 
