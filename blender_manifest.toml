@@ -1,0 +1,42 @@
+schema_version = "1.0.0"
+
+# ── Identity ──────────────────────────────────────────────────────────────────
+# `id` is the permanent internal name. Lowercase + underscores only, and it must
+# NEVER change once published — Blender keys installed-extension data off it.
+id = "radix"
+version = "1.0.0"
+name = "Radix Free"
+tagline = "Precision origin placement for Blender — free edition"
+# Format: "Name <email>". Edit to your real contact before you ship.
+maintainer = "Crater Creative <hello@cratercreative.com>"
+type = "add-on"
+
+# ── Links (optional but recommended) ──────────────────────────────────────────
+website = "https://cratercreative.gumroad.com/l/radixpro"
+
+# ── Discovery ─────────────────────────────────────────────────────────────────
+# Add-on tags must come from Blender's controlled vocabulary; these three are valid.
+tags = ["Object", "Modeling", "Pipeline"]
+
+# ── Compatibility ─────────────────────────────────────────────────────────────
+# Min is the floor you've actually tested. Extensions require Blender 4.2+.
+# You can lower to "4.2.0" only after verifying on that build.
+blender_version_min = "4.5.0"
+# Intentionally NO blender_version_max — capping it locks users out of future
+# point releases for no reason. Add one only if a future version genuinely breaks you.
+
+# ── Legal ─────────────────────────────────────────────────────────────────────
+# Add-ons that call bpy are normally treated as GPL derivatives. GPL still lets
+# you SELL the add-on (Gumroad is fine) and is required if you ever list on the
+# official Extensions Platform. Change the SPDX id only if you've taken legal advice.
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+copyright = [
+  "2026 Crater Creative Consultancy L.L.C.",
+]
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+# No permissions block needed: this build makes no web requests, writes no
+# files, and has zero external Python dependencies — pure bpy/gpu/mathutils.
+# No `[build]` / `platforms`: pure-Python, so all platforms are supported automatically.
