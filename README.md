@@ -1,5 +1,6 @@
 <img width="1024" height="568" alt="image" src="https://github.com/user-attachments/assets/aebcd89c-42d1-4ff5-97e5-c508b4150fe8" />
-<img width="251" height="529" alt="image" src="https://github.com/user-attachments/assets/7e11a85a-e7fc-45ea-a728-192f5d1ed969" />
+<img width="246" height="457" alt="image" src="https://github.com/user-attachments/assets/19534147-5a95-4d2a-ba18-677427162fb4" />
+
 
 # Radix | A 39 Precision Origin Placement for Blender
 
@@ -13,9 +14,6 @@ Built for architects, product designers, and anyone who needs clean pivot points
 
 ### 39 Snap Positions via Dropdown Menus
 Snap to any face, corner, edge midpoint, geometry extreme, or center which is grouped into Faces, Vertices, Edge Midpoints, and Centers dropdowns, plus Global Centers (Geometry, BBox, Mass) and Cursor / World Zero inline.
-
-### BBox Handle Mode
-Click any of the 26 bounding-box handles directly in the viewport such as corners, face centres, edge midpoints, and the volume centre. Handles enlarge on hover so you always know which point will be committed before clicking.
 
 ### Origin → World Zero
 One button. Moves the origin to (0, 0, 0) with no modal, no options.
@@ -44,7 +42,6 @@ Open the **N-Panel** (press `N` in the 3D Viewport) and click the **Radix Free**
 
 - **Snap Reference** | set snap source, orientation, and front axis
 - **Set Origin To** | the 4 dropdown groups + Global Centers + Cursor/World Zero
-- **BBox Handle Mode** | enable and click a handle directly in the viewport
 - **Alt+Q** | quick-access pie menu from anywhere in the 3D Viewport
 
 ---
@@ -57,10 +54,10 @@ Radix Free covers the core origin placement workflow. **[Radix Basic](https://di
 |---|:---:|:---:|:---:|
 | 39 snap positions (dropdown menus) | ✓ | ✓ | ✓ |
 | Origin → World Zero | ✓ | ✓ | ✓ |
-| BBox handles + hover-enlarge | ✓ | ✓ | ✓ |
 | Global Centers (Geometry / BBox / Mass) | ✓ | ✓ | ✓ |
 | Alt+Q pie menu | ✓ | ✓ | ✓ |
 | Snap Reference controls | ✓ | ✓ | ✓ |
+| BBox handles + hover-enlarge | — | ✓ | ✓ |
 | Surface / Vertex / Grid / Cursor snap | — | ✓ | ✓ |
 | Viewport preview (highlight quad + arrow) | — | ✓ | ✓ |
 | Snap History (10-slot, auto-recorded) | — | ✓ | ✓ |
