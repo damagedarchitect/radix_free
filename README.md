@@ -1,8 +1,7 @@
 <img width="1024" height="568" alt="image" src="https://github.com/user-attachments/assets/aebcd89c-42d1-4ff5-97e5-c508b4150fe8" />
 <img width="246" height="457" alt="image" src="https://github.com/user-attachments/assets/19534147-5a95-4d2a-ba18-677427162fb4" />
 
-## Radix Pro UI:
-<blockquote class="imgur-embed-pub" lang="en" data-id="a/Se8iGiW" data-context="false" ><a href="//imgur.com/a/Se8iGiW">Radix Pro v3.1.0 UI</a></blockquote><script async src="//s.imgur.com/min/embed.js" charset="utf-8"></script>
+[Radix Pro UI](https://imgur.com/gallery/radix-pro-v3-1-0-ui-Se8iGiW)
 
 # Radix | A 39 Precision Origin Placement for Blender
 
