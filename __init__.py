@@ -14,7 +14,6 @@ bl_info = {
 
 
 import bpy
-import csv
 import os
 import mathutils
 from mathutils import Vector, Matrix
@@ -2028,9 +2027,29 @@ def _on_load_post(*args):
     pass  # nothing to reset in Free
 
 
+# ── Radix tier mutual-exclusion ───────────────────────────────────────────────
+# Free / Basic / Pro share operator, menu, and panel identifiers, so only one
+# tier may be enabled at a time. The active tier is recorded in Blender's global
+# driver namespace (persists for the session, visible to every add-on). If a
+# different tier is already active, refuse to register with a clear message
+# instead of crashing mid-registration on a duplicate-identifier error.
+_RADIX_TIER = "Free"
+
+def _radix_guard_tier():
+    other = bpy.app.driver_namespace.get("_radix_active_tier")
+    if other and other != _RADIX_TIER:
+        raise RuntimeError(
+            f"Radix {other} is already enabled. Disable it under "
+            f"Edit \u203a Preferences \u203a Add-ons before enabling Radix {_RADIX_TIER}. "
+            f"The Radix tiers share the same tools and can't run at the same time."
+        )
+
+
 def register():
+    _radix_guard_tier()
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.app.driver_namespace["_radix_active_tier"] = _RADIX_TIER
 
     bpy.app.handlers.load_post.append(_on_load_post)
 
@@ -2100,6 +2119,7 @@ def register():
 
 
 def unregister():
+    bpy.app.driver_namespace.pop("_radix_active_tier", None)
     bpy.types.VIEW3D_MT_object.remove(menu_func)
     bpy.types.VIEW3D_MT_object_context_menu.remove(context_menu_func)
 
